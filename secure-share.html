@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Message Share</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section.sender {
+            border-left: 4px solid #2196F3;
+        }
+        .section.receiver {
+            border-left: 4px solid #4CAF50;
+        }
+        .section.keys {
+            border-left: 4px solid #9C27B0;
+        }
+        .section.mode-select {
+            border-left: 4px solid #FF9800;
+            text-align: center;
+        }
+        textarea {
+            width: 100%;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        textarea[readonly] {
+            background: #f9f9f9;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 5px 5px 0;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        button.success {
+            background: #4CAF50;
+        }
+        button.success:hover {
+            background: #388E3C;
+        }
+        button.mode-btn {
+            background: #FF9800;
+            padding: 20px 40px;
+            font-size: 18px;
+            margin: 10px;
+        }
+        button.mode-btn:hover {
+            background: #F57C00;
+        }
+        button.change-mode {
+            background: #9E9E9E;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        button.change-mode:hover {
+            background: #757575;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .field {
+            margin-bottom: 15px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .status.show {
+            display: block;
+        }
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+        .instructions {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ffcc80;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #e65100;
+        }
+        .instructions ol {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+        .copy-btn {
+            background: #607D8B;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background: #455A64;
+        }
+        .hidden {
+            display: none;
+        }
+        select {
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+            background: white;
+        }
+        .key-options {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .key-options label {
+            margin-right: 10px;
+            margin-bottom: 0;
+        }
+        .key-size-info {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        .mode-question {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Secure Message Share</h1>
+
+    <!-- Mode Selection -->
+    <div id="modeSelection" class="section mode-select">
+        <p class="mode-question">What do you want to do?</p>
+        <button class="mode-btn" onclick="selectMode('send')">Send a Secret Message</button>
+        <button class="mode-btn" onclick="selectMode('receive')">Receive a Secret Message</button>
+    </div>
+
+    <!-- Send Mode Instructions -->
+    <div id="sendInstructions" class="instructions hidden">
+        <h3>Sending a Secret Message</h3>
+        <ol>
+            <li>Ask the recipient to send you their Public Key</li>
+            <li>Paste their Public Key below</li>
+            <li>Type your secret message and click "Encrypt Message"</li>
+            <li>Copy and send the encrypted message to the recipient</li>
+        </ol>
+        <button class="change-mode" onclick="selectMode(null)">Change Mode</button>
+    </div>
+
+    <!-- Receive Mode Instructions -->
+    <div id="receiveInstructions" class="instructions hidden">
+        <h3>Receiving a Secret Message</h3>
+        <ol>
+            <li>Click "Generate Key Pair" to create your keys</li>
+            <li>Copy your Public Key and send it to the sender</li>
+            <li>When you receive the encrypted message, paste it below</li>
+            <li>Click "Decrypt Message" to reveal the secret</li>
+        </ol>
+        <button class="change-mode" onclick="selectMode(null)">Change Mode</button>
+    </div>
+
+    <!-- Key Generation (Receive mode only) -->
+    <div id="keysSection" class="section keys hidden">
+        <h2>Step 1: Generate Your Key Pair</h2>
+        <div id="keyStatus" class="status"></div>
+        <div class="key-options">
+            <label for="keySize">Key Size:</label>
+            <select id="keySize">
+                <option value="2048">2048-bit (fast)</option>
+                <option value="4096" selected>4096-bit (recommended)</option>
+                <option value="8192">8192-bit (slow, max security)</option>
+            </select>
+            <span class="key-size-info">Larger keys are more secure but take longer to generate</span>
+        </div>
+        <button id="generateBtn" onclick="generateKeyPair()">Generate Key Pair</button>
+        <div class="field" style="margin-top: 15px;">
+            <label for="myPublicKey">Your Public Key (send this to the person who wants to send you a message):</label>
+            <textarea id="myPublicKey" rows="8" readonly placeholder="Click 'Generate Key Pair' to create your keys..."></textarea>
+            <button class="copy-btn" onclick="copyToClipboard('myPublicKey')">Copy Public Key</button>
+        </div>
+        <p><em>Your private key is stored securely in memory and never displayed.</em></p>
+    </div>
+
+    <!-- Encrypt Section (Send mode only) -->
+    <div id="encryptSection" class="section sender hidden">
+        <h2>Step 1: Encrypt Your Message</h2>
+        <div id="encryptStatus" class="status"></div>
+        <div class="field">
+            <label for="recipientPublicKey">Recipient's Public Key:</label>
+            <textarea id="recipientPublicKey" rows="8" placeholder="Paste the recipient's public key here..."></textarea>
+        </div>
+        <div class="field">
+            <label for="plaintext">Secret Message to Encrypt:</label>
+            <textarea id="plaintext" rows="4" placeholder="Type your secret message here..."></textarea>
+        </div>
+        <button class="success" onclick="encryptMessage()">Encrypt Message</button>
+        <div class="field" style="margin-top: 15px;">
+            <label for="encryptedOutput">Encrypted Message (send this to recipient):</label>
+            <textarea id="encryptedOutput" rows="6" readonly placeholder="Encrypted message will appear here..."></textarea>
+            <button class="copy-btn" onclick="copyToClipboard('encryptedOutput')">Copy Encrypted Message</button>
+        </div>
+    </div>
+
+    <!-- Decrypt Section (Receive mode only) -->
+    <div id="decryptSection" class="section receiver hidden">
+        <h2>Step 2: Decrypt the Message</h2>
+        <div id="decryptStatus" class="status"></div>
+        <div class="field">
+            <label for="encryptedInput">Encrypted Message:</label>
+            <textarea id="encryptedInput" rows="6" placeholder="Paste the encrypted message here..."></textarea>
+        </div>
+        <button class="success" onclick="decryptMessage()">Decrypt Message</button>
+        <div class="field" style="margin-top: 15px;">
+            <label for="decryptedOutput">Decrypted Message:</label>
+            <textarea id="decryptedOutput" rows="4" readonly placeholder="Decrypted message will appear here..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Store the private key in memory (never displayed)
+        let myPrivateKey = null;
+        let myPublicKey = null;
+        let currentMode = null;
+        let currentKeySize = 4096;
+
+        // Get RSA-OAEP configuration for a given key size
+        function getRsaConfig(keySize) {
+            return {
+                name: "RSA-OAEP",
+                modulusLength: keySize,
+                publicExponent: new Uint8Array([1, 0, 1]),  // 65537
+                hash: "SHA-256"
+            };
+        }
+
+        // Base RSA-OAEP config for importing keys (modulusLength not needed for import)
+        const RSA_IMPORT_CONFIG = {
+            name: "RSA-OAEP",
+            hash: "SHA-256"
+        };
+
+        // Calculate max message size for RSA-OAEP with SHA-256
+        // Formula: keySize/8 - 2*hashSize/8 - 2
+        function getMaxMessageSize(keySize) {
+            return (keySize / 8) - 66;  // 66 = 2*32 + 2 for SHA-256
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+
+            // Hide all sections first
+            document.getElementById('modeSelection').classList.add('hidden');
+            document.getElementById('sendInstructions').classList.add('hidden');
+            document.getElementById('receiveInstructions').classList.add('hidden');
+            document.getElementById('keysSection').classList.add('hidden');
+            document.getElementById('encryptSection').classList.add('hidden');
+            document.getElementById('decryptSection').classList.add('hidden');
+
+            if (mode === 'send') {
+                // Show send-related sections
+                document.getElementById('sendInstructions').classList.remove('hidden');
+                document.getElementById('encryptSection').classList.remove('hidden');
+            } else if (mode === 'receive') {
+                // Show receive-related sections
+                document.getElementById('receiveInstructions').classList.remove('hidden');
+                document.getElementById('keysSection').classList.remove('hidden');
+                document.getElementById('decryptSection').classList.remove('hidden');
+            } else {
+                // Show mode selection
+                document.getElementById('modeSelection').classList.remove('hidden');
+            }
+        }
+
+        function showStatus(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = 'status show ' + (isError ? 'error' : 'success');
+        }
+
+        function hideStatus(elementId) {
+            document.getElementById(elementId).className = 'status';
+        }
+
+        // Convert ArrayBuffer to Base64
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // Convert Base64 to ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Convert a CryptoKey to PEM format
+        async function cryptoKeyToPem(key, isPrivate = false) {
+            const format = isPrivate ? 'pkcs8' : 'spki';
+            const exported = await crypto.subtle.exportKey(format, key);
+            const base64 = arrayBufferToBase64(exported);
+
+            // Format with line breaks every 64 characters
+            const formatted = base64.match(/.{1,64}/g).join('\n');
+
+            const type = isPrivate ? 'PRIVATE' : 'PUBLIC';
+            return `-----BEGIN ${type} KEY-----\n${formatted}\n-----END ${type} KEY-----`;
+        }
+
+        // Convert PEM to CryptoKey
+        async function pemToCryptoKey(pem, isPrivate = false) {
+            // Remove headers and whitespace
+            const pemContents = pem
+                .replace(/-----BEGIN [A-Z ]+ KEY-----/, '')
+                .replace(/-----END [A-Z ]+ KEY-----/, '')
+                .replace(/\s/g, '');
+
+            const binaryDer = base64ToArrayBuffer(pemContents);
+            const format = isPrivate ? 'pkcs8' : 'spki';
+            const usage = isPrivate ? ['decrypt'] : ['encrypt'];
+
+            return await crypto.subtle.importKey(
+                format,
+                binaryDer,
+                RSA_IMPORT_CONFIG,
+                true,
+                usage
+            );
+        }
+
+        // Get key size from a CryptoKey by checking exported length
+        async function getKeySizeFromKey(key) {
+            const exported = await crypto.subtle.exportKey('spki', key);
+            const byteLength = exported.byteLength;
+            // Approximate key size based on exported SPKI length
+            if (byteLength > 1100) return 8192;
+            if (byteLength > 550) return 4096;
+            return 2048;
+        }
+
+        // Generate key pair
+        async function generateKeyPair() {
+            const btn = document.getElementById('generateBtn');
+            const keySizeSelect = document.getElementById('keySize');
+            const selectedKeySize = parseInt(keySizeSelect.value);
+
+            btn.disabled = true;
+            keySizeSelect.disabled = true;
+            btn.textContent = 'Generating...';
+            hideStatus('keyStatus');
+
+            try {
+                const rsaConfig = getRsaConfig(selectedKeySize);
+                const keyPair = await crypto.subtle.generateKey(
+                    rsaConfig,
+                    true,  // extractable
+                    ['encrypt', 'decrypt']
+                );
+
+                myPrivateKey = keyPair.privateKey;
+                myPublicKey = keyPair.publicKey;
+                currentKeySize = selectedKeySize;
+
+                // Display public key in PEM format
+                const publicKeyPem = await cryptoKeyToPem(myPublicKey, false);
+                document.getElementById('myPublicKey').value = publicKeyPem;
+
+                showStatus('keyStatus', `${selectedKeySize}-bit key pair generated successfully! Your private key is stored in memory.`);
+                btn.textContent = 'Regenerate Key Pair';
+            } catch (error) {
+                showStatus('keyStatus', 'Error generating keys: ' + error.message, true);
+                btn.textContent = 'Generate Key Pair';
+            }
+
+            btn.disabled = false;
+            keySizeSelect.disabled = false;
+        }
+
+        // Encrypt message
+        async function encryptMessage() {
+            hideStatus('encryptStatus');
+
+            const recipientPem = document.getElementById('recipientPublicKey').value.trim();
+            const plaintext = document.getElementById('plaintext').value;
+
+            if (!recipientPem) {
+                showStatus('encryptStatus', 'Please paste the recipient\'s public key.', true);
+                return;
+            }
+
+            if (!plaintext) {
+                showStatus('encryptStatus', 'Please enter a message to encrypt.', true);
+                return;
+            }
+
+            try {
+                // Import recipient's public key
+                const recipientKey = await pemToCryptoKey(recipientPem, false);
+
+                // Detect key size from the imported key
+                const keySize = await getKeySizeFromKey(recipientKey);
+                const maxMessageSize = getMaxMessageSize(keySize);
+
+                // Encrypt the message
+                const encoder = new TextEncoder();
+                const data = encoder.encode(plaintext);
+
+                // RSA-OAEP with SHA-256 can encrypt up to: keySize/8 - 2*hashSize/8 - 2
+                if (data.byteLength > maxMessageSize) {
+                    showStatus('encryptStatus', `Message too long. Maximum ~${maxMessageSize} characters for ${keySize}-bit RSA encryption.`, true);
+                    return;
+                }
+
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: "RSA-OAEP" },
+                    recipientKey,
+                    data
+                );
+
+                // Convert to base64 (like the bash script does)
+                const base64Encrypted = arrayBufferToBase64(encrypted);
+                document.getElementById('encryptedOutput').value = base64Encrypted;
+
+                showStatus('encryptStatus', 'Message encrypted successfully! Copy and send the encrypted message.');
+            } catch (error) {
+                showStatus('encryptStatus', 'Error encrypting: ' + error.message, true);
+            }
+        }
+
+        // Decrypt message
+        async function decryptMessage() {
+            hideStatus('decryptStatus');
+
+            const encryptedBase64 = document.getElementById('encryptedInput').value.trim();
+
+            if (!myPrivateKey) {
+                showStatus('decryptStatus', 'Please generate your key pair first (Step 1).', true);
+                return;
+            }
+
+            if (!encryptedBase64) {
+                showStatus('decryptStatus', 'Please paste the encrypted message.', true);
+                return;
+            }
+
+            try {
+                // Convert base64 to ArrayBuffer
+                const encryptedData = base64ToArrayBuffer(encryptedBase64);
+
+                // Decrypt using private key
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: "RSA-OAEP" },
+                    myPrivateKey,
+                    encryptedData
+                );
+
+                // Convert to string
+                const decoder = new TextDecoder();
+                const plaintext = decoder.decode(decrypted);
+
+                document.getElementById('decryptedOutput').value = plaintext;
+                showStatus('decryptStatus', 'Message decrypted successfully!');
+            } catch (error) {
+                showStatus('decryptStatus', 'Error decrypting: ' + error.message + '. Make sure this message was encrypted with YOUR public key.', true);
+            }
+        }
+
+        // Copy to clipboard helper
+        async function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).value;
+            if (!text) {
+                alert('Nothing to copy!');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(text);
+                alert('Copied to clipboard!');
+            } catch (error) {
+                // Fallback for older browsers
+                const textarea = document.getElementById(elementId);
+                textarea.select();
+                document.execCommand('copy');
+                alert('Copied to clipboard!');
+            }
+        }
+    </script>
+</body>
+</html>
